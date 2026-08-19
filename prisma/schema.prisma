@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ORGANIZATION_ADMIN
+  ELECTION_OFFICER
+  CANDIDATE
+  VOTER
+}
+
+model Organization {
+  id Int @id @default(autoincrement())
+  name String
+  description String?
+  users User[]
+  polls Poll[]
+  createdAt DateTime @default(now())
+}
+
+model User {
+  id Int @id @default(autoincrement())
+  email String @unique
+  name String
+  password String // we'll hash this with bcrypt
+  role Role @default(VOTER)
+  organizationId Int?
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  votes Vote[]
+  resetToken String? // for Password Reset
+  inviteToken String? // for Organization Invitation
+  createdAt DateTime @default(now())
+}
+
+model Profile {
+  id String @id @db.Uuid
+  email String? @db.Text
+  fullName String? @db.Text @map("full_name")
+  organizationName String? @db.Text @map("organization_name")
+  createdAt DateTime @default(now()) @db.Timestamp(6) @map("created_at")
+  updatedAt DateTime @updatedAt @db.Timestamp(6) @map("updated_at")
+
+  @@map("profiles")
+}
+
+model Poll {
+  id Int @id @default(autoincrement())
+  title String
+  description String?
+  organizationId Int
+  organization Organization @relation(fields: [organizationId], references: [id])
+  options Option[]
+  votes Vote[]
+  createdBy Int // Election Officer or Admin
+  createdAt DateTime @default(now())
+}
+
+model Option {
+  id Int @id @default(autoincrement())
+  text String
+  pollId Int
+  poll Poll @relation(fields: [pollId], references: [id])
+  votes Vote[]
+}
+
+model Vote {
+  id Int @id @default(autoincrement())
+  userId Int
+  pollId Int
+  optionId Int
+  
+  user User @relation(fields: [userId], references: [id])
+  poll Poll @relation(fields: [pollId], references: [id])
+  option Option @relation(fields: [optionId], references: [id])
+
+  @@unique([userId, pollId]) // 1 vote per user per poll
+}
+
+// ============================================
+// VOTING SYSTEM MODELS (Phase 6)
+// ============================================
+
+model Ballot {
+  id String @id @db.Uuid
+  election_id String @db.Uuid
+  election_voter_id String @db.Uuid
+  status String @default("SUBMITTED") @db.VarChar(50)
+  ballot_reference String @unique @db.VarChar(50)
+  submitted_at DateTime @db.Timestamp(6)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @updatedAt @db.Timestamp(6)
+  
+  selections BallotSelection[]
+
+  @@index([election_id])
+  @@index([election_voter_id])
+  @@index([status])
+  @@map("ballots")
+}
+
+model BallotSelection {
+  id String @id @db.Uuid
+  ballot_id String @db.Uuid
+  position_id String @db.Uuid
+  candidate_id String? @db.Uuid
+  abstained Boolean @default(false)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  
+  ballot Ballot @relation(fields: [ballot_id], references: [id], onDelete: Cascade)
+
+  @@index([ballot_id])
+  @@index([position_id])
+  @@index([candidate_id])
+  @@map("ballot_selections")
+}
+
+model BallotAuditEvent {
+  id String @id @db.Uuid
+  event_type String @db.VarChar(100)
+  election_id String @db.Uuid
+  details Json?
+  created_by String? @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([election_id])
+  @@index([event_type])
+  @@map("ballot_audit_events")
+}

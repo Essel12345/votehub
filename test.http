@@ -1,0 +1,15 @@
+### Register a new Organization + User
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "organizationName": "VoteHub Demo",
+  "country": "Ghana",
+  "timezone": "Africa/Accra",
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "john@example.com",
+  "password": "Password123"
+}
+
+###
