@@ -1,6 +1,20 @@
 import Link from "next/link";
 
-import CandidateStatusBadge from "@/components/candidates/CandidateStatusBadge";
+function CandidateStatusBadge({ status }: { status: string }) {
+  const normalizedStatus = status.toLowerCase();
+  const statusStyles =
+    normalizedStatus === "approved"
+      ? "bg-emerald-100 text-emerald-700"
+      : normalizedStatus === "rejected"
+        ? "bg-red-100 text-red-700"
+        : "bg-amber-100 text-amber-700";
+
+  return (
+    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusStyles}`}>
+      {status}
+    </span>
+  );
+}
 
 export default function CandidateCard({
   candidate,
