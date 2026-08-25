@@ -20,7 +20,49 @@ export interface RegisterData {
   password: string;
 }
 
-async function ensureUniqueOrganizationSlug(baseName: string): Promise<string> {
+type SupabaseErrorLike = {
+  code?: unknown;
+  status?: unknown;
+  statusCode?: unknown;
+  message?: unknown;
+};
+
+function sanitizeDiagnosticMessage(error: unknown): string {
+  const candidate = error as SupabaseErrorLike;
+  const message = typeof candidate?.message === "string" ? candidate.message : "Unknown error";
+
+  return message
+    .replace(/[\r\n]+/g, " ")
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[redacted-email]")
+    .replace(/\+?\d[\d\s().-]{7,}\d/g, "[redacted-phone]")
+    .replace(/https?:\/\/\S+/gi, "[redacted-url]")
+    .slice(0, 300);
+}
+
+function logRegistrationOperation(
+  correlationId: string,
+  operation: string,
+  success: boolean,
+  error?: unknown
+) {
+  const candidate = error as SupabaseErrorLike | undefined;
+  const diagnostic = {
+    operation,
+    success,
+    errorCode: typeof candidate?.code === "string" ? candidate.code : "",
+    status: String(candidate?.status ?? candidate?.statusCode ?? ""),
+    message: success ? "" : sanitizeDiagnosticMessage(error),
+    correlationId,
+  };
+
+  if (success) {
+    console.info(diagnostic);
+  } else {
+    console.error(diagnostic);
+  }
+}
+
+async function ensureUniqueOrganizationSlug(baseName: string, correlationId: string): Promise<string> {
   const supabase = await createClient();
   const baseSlug = createSlug(baseName) || "organization";
 
@@ -36,10 +78,12 @@ async function ensureUniqueOrganizationSlug(baseName: string): Promise<string> {
       .maybeSingle();
 
     if (error) {
+      logRegistrationOperation(correlationId, "organization slug lookup", false, error);
       throw error;
     }
 
     if (!data) {
+      logRegistrationOperation(correlationId, "organization slug lookup", true);
       return slug;
     }
 
@@ -48,7 +92,7 @@ async function ensureUniqueOrganizationSlug(baseName: string): Promise<string> {
   }
 }
 
-export async function registerOrganization(data: RegisterData) {
+export async function registerOrganization(data: RegisterData, correlationId: string) {
   const payload = registerSchema.parse(data);
 
   const {
@@ -71,7 +115,7 @@ export async function registerOrganization(data: RegisterData) {
   const firstNameValue = firstName?.trim() || adminName?.split(" ")[0]?.trim() || "Administrator";
   const lastNameValue = lastName?.trim() || adminName?.split(" ").slice(1).join(" ").trim() || "User";
   const contactEmailValue = contactEmail?.trim() || email;
-  const slug = await ensureUniqueOrganizationSlug(organizationName);
+  const slug = await ensureUniqueOrganizationSlug(organizationName, correlationId);
 
   const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
     email,
@@ -92,8 +136,11 @@ export async function registerOrganization(data: RegisterData) {
   });
 
   if (authError || !authData.user) {
+    logRegistrationOperation(correlationId, "Supabase Auth user creation", false, authError);
     throw new Error(authError?.message ?? "Unable to create user account.");
   }
+
+  logRegistrationOperation(correlationId, "Supabase Auth user creation", true);
 
   const supabase = await createClient();
 
@@ -116,8 +163,11 @@ export async function registerOrganization(data: RegisterData) {
     .single();
 
   if (organizationError || !organization) {
+    logRegistrationOperation(correlationId, "organization INSERT", false, organizationError);
     throw new Error("Unable to create organization record.");
   }
+
+  logRegistrationOperation(correlationId, "organization INSERT", true);
 
   const { error: profileError } = await supabase.from("profiles").insert({
     id: authData.user.id,
@@ -131,8 +181,11 @@ export async function registerOrganization(data: RegisterData) {
   });
 
   if (profileError) {
+    logRegistrationOperation(correlationId, "profile INSERT", false, profileError);
     throw new Error("Unable to create organization administrator profile.");
   }
+
+  logRegistrationOperation(correlationId, "profile INSERT", true);
 
   return {
     user: authData.user,

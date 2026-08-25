@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await registerOrganization(parsed.data);
+    const result = await registerOrganization(parsed.data, crypto.randomUUID());
 
     return NextResponse.json(
       {
