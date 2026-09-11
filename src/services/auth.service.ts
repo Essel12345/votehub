@@ -1,5 +1,4 @@
 import { adminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/Server";
 import { createSlug } from "@/lib/utils/slug";
 import { registerSchema } from "@/lib/validation/auth";
 
@@ -63,14 +62,13 @@ function logRegistrationOperation(
 }
 
 async function ensureUniqueOrganizationSlug(baseName: string, correlationId: string): Promise<string> {
-  const supabase = await createClient();
   const baseSlug = createSlug(baseName) || "organization";
 
   let slug = baseSlug;
   let suffix = 1;
 
   while (true) {
-    const { data, error } = await supabase
+    const { data, error } = await adminClient
       .from("organizations")
       .select("id")
       .eq("slug", slug)
@@ -142,8 +140,6 @@ export async function registerOrganization(data: RegisterData, correlationId: st
 
   logRegistrationOperation(correlationId, "Supabase Auth user creation", true);
 
-  const supabase = await createClient();
-
   const organizationPayload = {
     name: organizationName,
     slug,
@@ -156,7 +152,7 @@ export async function registerOrganization(data: RegisterData, correlationId: st
     contact_phone: contactPhone || null,
   };
 
-  const { data: organization, error: organizationError } = await supabase
+  const { data: organization, error: organizationError } = await adminClient
     .from("organizations")
     .insert(organizationPayload)
     .select()
@@ -169,7 +165,7 @@ export async function registerOrganization(data: RegisterData, correlationId: st
 
   logRegistrationOperation(correlationId, "organization INSERT", true);
 
-  const { error: profileError } = await supabase.from("profiles").insert({
+  const { error: profileError } = await adminClient.from("profiles").insert({
     id: authData.user.id,
     email,
     full_name: adminName || `${firstNameValue} ${lastNameValue}`.trim(),
