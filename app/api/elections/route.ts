@@ -52,9 +52,20 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unable to create election.";
+    console.error("ELECTION_CREATE_FAILED:", error);
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : typeof error === "object" && error !== null && "message" in error
+          ? String((error as { message?: unknown }).message)
+          : "Unable to create election.";
+
     return NextResponse.json(
-      { error: message, code: "ELECTION_CREATE_FAILED" },
+      {
+        error: message,
+        code: "ELECTION_CREATE_FAILED",
+      },
       { status: 400 }
     );
   }

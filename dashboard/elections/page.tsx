@@ -68,14 +68,6 @@ export default async function ElectionsPage({
       <ElectionFilters
         status={status}
         search={query}
-        onStatusChange={(nextStatus) => {
-          const params = new URLSearchParams();
-          if (query) params.set("search", query);
-          if (nextStatus !== "ALL") params.set("status", nextStatus);
-          params.set("page", "1");
-          return undefined;
-        }}
-        onSearchChange={() => undefined}
       />
 
       {elections.length === 0 ? (
@@ -94,7 +86,7 @@ export default async function ElectionsPage({
 
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <p className="text-sm text-slate-500">
-              Showing page {currentPage} of {totalPages} • {totalCount} total
+              Showing page {currentPage} of {totalPages} â€¢ {totalCount} total
             </p>
             <div className="flex gap-2">
               {currentPage > 1 ? (

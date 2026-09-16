@@ -29,3 +29,7 @@ yarn-error.log*
 Thumbs.db
 .vercel
 .env*
+
+supabase/.temp/
+
+tsconfig.tsbuildinfo

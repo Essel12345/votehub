@@ -68,14 +68,6 @@ export default async function ElectionsPage({
       <ElectionFilters
         status={status}
         search={query}
-        onStatusChange={(nextStatus) => {
-          const params = new URLSearchParams();
-          if (query) params.set("search", query);
-          if (nextStatus !== "ALL") params.set("status", nextStatus);
-          params.set("page", "1");
-          return undefined;
-        }}
-        onSearchChange={() => undefined}
       />
 
       {elections.length === 0 ? (

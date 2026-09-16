@@ -25,16 +25,46 @@ export default async function CandidateListPage({
     redirect("/auth/login");
   }
 
-  const election = await getElectionById(electionId);
-  const position = await getPositionById(positionId);
-  if (!election || !position || election.organization_id !== position.organization_id) {
-    throw new Error("Election or position not found.");
-  }
+let election;
+let position;
+let candidates;
 
-  const candidates = await listCandidatesForPositionService(user.id, electionId, positionId, {
-    search: query || undefined,
-    status: status || undefined,
-  });
+try {
+  election = await getElectionById(electionId);
+} catch (error) {
+  console.error("CANDIDATES_PAGE_ELECTION_FAILED:", error);
+  throw error;
+}
+
+try {
+  position = await getPositionById(positionId);
+} catch (error) {
+  console.error("CANDIDATES_PAGE_POSITION_FAILED:", error);
+  throw error;
+}
+
+if (
+  !election ||
+  !position ||
+  election.organization_id !== position.organization_id
+) {
+  throw new Error("Election or position not found.");
+}
+
+try {
+  candidates = await listCandidatesForPositionService(
+    user.id,
+    electionId,
+    positionId,
+    {
+      search: query || undefined,
+      status: status || undefined,
+    }
+  );
+} catch (error) {
+  console.error("CANDIDATES_PAGE_LIST_FAILED:", error);
+  throw error;
+}
 
   return (
     <div className="space-y-6">

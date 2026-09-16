@@ -39,11 +39,14 @@ export async function createCandidate(input: CreateCandidateInput): Promise<Cand
   const { data, error } = await supabase
     .from("candidates")
     .insert({
-      ...input,
-      status: input.status ?? "PENDING",
-    })
-    .select()
-    .single();
+    ...input,
+    name: input.display_name,
+    position: input.position_id,
+    manifesto: input.manifesto ?? null,
+    status: input.status ?? "PENDING",
+  })
+  .select()
+  .single();
 
   if (error) {
     throw error;
@@ -121,10 +124,20 @@ export async function updateCandidate(
 export async function deleteCandidate(candidateId: string): Promise<boolean> {
   const supabase = await createClient();
 
-  const { error } = await supabase.from("candidates").delete().eq("id", candidateId);
+  const { data, error } = await supabase
+    .from("candidates")
+    .delete()
+    .eq("id", candidateId)
+    .select("id");
 
   if (error) {
     throw error;
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error(
+      "Candidate was not deleted. The candidate may not exist or your account may not have permission to delete it."
+    );
   }
 
   return true;

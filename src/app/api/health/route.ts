@@ -1,17 +1,18 @@
-/**
+﻿/**
  * Health Check Endpoint
  * Returns application and dependency health status
  * Used by load balancers and monitoring systems
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const startTime = Date.now();
   let status: "healthy" | "degraded" | "unhealthy" = "healthy";
   const timestamp = new Date().toISOString();
   const uptime = process.uptime();
   const version = process.env.APP_VERSION || "1.0.0";
+
   const checks: Record<string, string> = {
     database: "unknown",
     auth: "unknown",
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
   };
 
   try {
-    // Check environment variables are set
+    // Check required environment variables
     if (
       !process.env.SUPABASE_URL ||
       !process.env.SUPABASE_ANON_KEY ||
@@ -31,22 +32,23 @@ export async function GET(request: NextRequest) {
       checks.environment = "configured";
     }
 
-    // This endpoint validates configuration only; connectivity is checked by the
-    // authenticated system-health endpoint to avoid an unauthenticated DB query.
+    // Configuration check only.
+    // Connectivity is checked by the authenticated system-health endpoint.
     checks.database = "configured";
 
-    // Check auth provider configuration
-    if (process.env.NEXTAUTH_SECRET && process.env.NEXTAUTH_URL) {
+    // Check Supabase authentication configuration
+    if (
+      process.env.SUPABASE_URL &&
+      process.env.SUPABASE_ANON_KEY &&
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    ) {
       checks.auth = "configured";
     } else {
       checks.auth = "not_configured";
       status = "degraded";
     }
 
-    // Calculate response time
     const responseTime = Date.now() - startTime;
-
-    // Return 200 if healthy or degraded, 503 if unhealthy
     const statusCode = status === "unhealthy" ? 503 : 200;
 
     return NextResponse.json(
@@ -60,9 +62,9 @@ export async function GET(request: NextRequest) {
       },
       { status: statusCode }
     );
-  } catch (error) {
-    // Even if error, don't expose error details
+  } catch {
     const responseTime = Date.now() - startTime;
+
     return NextResponse.json(
       {
         status: "unhealthy",
@@ -75,9 +77,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * HEAD request support (for load balancers that prefer HEAD)
- */
 export async function HEAD() {
   return new NextResponse(null, { status: 200 });
 }
