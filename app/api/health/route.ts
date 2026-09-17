@@ -36,7 +36,11 @@ export async function GET(request: NextRequest) {
     checks.database = "configured";
 
     // Check auth provider configuration
-    if (process.env.NEXTAUTH_SECRET && process.env.NEXTAUTH_URL) {
+    if (
+      process.env.SUPABASE_URL &&
+      process.env.SUPABASE_ANON_KEY &&
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    ) {
       checks.auth = "configured";
     } else {
       checks.auth = "not_configured";
