@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { listMyElections } from "@/services/elections/election.service";
 import { createClient } from "@/lib/supabase/Server";
 
@@ -17,19 +18,22 @@ export default async function RecentElection() {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <h2 className="text-xl font-semibold text-slate-900">Recent elections</h2>
+
       <div className="mt-4 space-y-3">
         {latest.length === 0 ? (
           <p className="text-sm text-slate-500">No elections have been created yet.</p>
         ) : (
-          latest.map((election: { id: string; title: string; status: string; starts_at: string }) => (
-            <div key={election.id} className="flex items-center justify-between rounded-xl border border-slate-200 p-3">
-              <div>
-                <p className="font-medium text-slate-900">{election.title}</p>
-                <p className="text-sm text-slate-500">{election.status}</p>
-              </div>
-              <span className="text-sm text-slate-500">{new Date(election.starts_at).toLocaleDateString()}</span>
-            </div>
-          ))
+          latest.map((election: { id: string; title: string; status: string; starts_at: string; }) => (
+              <Link key={election.id} href={`/dashboard/elections/${election.id}`}className="flex items-center justify-between rounded-xl border border-slate-200 p-3 transition hover:border-slate-300 hover:bg-slate-50">
+                <div>
+                  <p className="font-medium text-slate-900">{election.title}</p>
+                  <p className="text-sm text-slate-500">{election.status}</p>
+                </div>
+
+                <span className="text-sm text-slate-500">{new Date(election.starts_at).toLocaleDateString()}</span>
+              </Link>
+            ),
+          )
         )}
       </div>
     </div>
