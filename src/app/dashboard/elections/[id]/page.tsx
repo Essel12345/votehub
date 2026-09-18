@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/Server";
 import { getElectionForUser } from "@/services/elections/election.service";
 import ElectionStatusBadge from "@/components/elections/ElectionStatusBadge";
 import { ElectionDetailActions } from "@/components/elections/ElectionDetailActions";
+import { listPositionsForElectionService } from "@/services/positions/position.service";
 
 export default async function ElectionDetailPage({
   params,
@@ -22,6 +23,7 @@ export default async function ElectionDetailPage({
   }
 
   const election = await getElectionForUser(user.id, id);
+  const positions = await listPositionsForElectionService(user.id, id);
 
   return (
     <div className="space-y-6">
@@ -49,7 +51,9 @@ export default async function ElectionDetailPage({
 
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-6 flex items-center justify-between gap-4">
-          <span className="text-sm font-medium text-slate-500">Current status</span>
+          <span className="text-sm font-medium text-slate-500">
+            Current status
+          </span>
           <ElectionStatusBadge status={election.status} />
         </div>
 
@@ -60,20 +64,62 @@ export default async function ElectionDetailPage({
               {new Date(election.starts_at).toLocaleString()}
             </dd>
           </div>
+
           <div>
             <dt className="text-sm font-medium text-slate-500">Ends</dt>
             <dd className="mt-1 text-lg font-semibold text-slate-900">
               {new Date(election.ends_at).toLocaleString()}
             </dd>
           </div>
+
           <div className="sm:col-span-2">
-            <dt className="text-sm font-medium text-slate-500">Description</dt>
-            <dd className="mt-1 text-base text-slate-700">{election.description || "No description."}</dd>
+            <dt className="text-sm font-medium text-slate-500">
+              Description
+            </dt>
+            <dd className="mt-1 text-base text-slate-700">
+              {election.description || "No description."}
+            </dd>
           </div>
         </dl>
       </div>
 
-      <ElectionDetailActions electionId={election.id} status={election.status} />
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div>
+          <h2 className="text-xl font-semibold text-slate-900">Positions</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Positions available in this election.
+          </p>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {positions.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              No positions have been created for this election yet.
+            </p>
+          ) : (
+            positions.map((position) => (
+              <Link
+                key={position.id}
+                href={`/dashboard/elections/${election.id}/positions/${position.id}`}
+                className="block rounded-xl border border-slate-200 p-4 transition hover:border-slate-300 hover:bg-slate-50"
+              >
+                <p className="font-medium text-slate-900">{position.title}</p>
+
+                {position.description && (
+                  <p className="mt-1 text-sm text-slate-500">
+                    {position.description}
+                  </p>
+                )}
+              </Link>
+            ))
+          )}
+        </div>
+      </div>
+
+      <ElectionDetailActions
+        electionId={election.id}
+        status={election.status}
+      />
     </div>
   );
 }
